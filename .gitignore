@@ -1,0 +1,18 @@
+# Maven
+/target/
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# IntelliJ
+.idea/
+*.iml
+
+# Banco local
+*.duckdb
+
+# Outputs gerados
+/data/processed/
+/reports/figures/
