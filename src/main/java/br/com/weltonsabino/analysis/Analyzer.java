@@ -28,9 +28,8 @@ public class Analyzer {
             Files.createDirectories(outputPath.getParent());
         }
 
-        try (Connection connection = db.connection();
-             Statement stmt = connection.createStatement()) {
-
+        Connection connection = db.connection();
+        try (Statement stmt = connection.createStatement()) {
             int totalLinhas = getInt(stmt, "SELECT COUNT(*) FROM empresas_abertas_sc");
             int totalEmpresas = getInt(stmt, "SELECT SUM(quantidade_empresas) FROM empresas_abertas_sc");
             int totalMunicipios = getInt(stmt, "SELECT COUNT(DISTINCT municipio) FROM empresas_abertas_sc");
@@ -181,10 +180,9 @@ public class Analyzer {
         List<String> labels = new ArrayList<>();
         List<Integer> values = new ArrayList<>();
 
-        try (Connection connection = db.connection();
-             Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
+        Connection connection = db.connection();
+        try (Statement stmt = connection.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 labels.add(rs.getString(1));
                 values.add(rs.getInt(2));
