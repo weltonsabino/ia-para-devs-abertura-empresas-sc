@@ -1,10 +1,15 @@
 package br.com.weltonsabino.etl;
 
-import java.time.YearMonth;
-
 public record Row(
+        int anoAbertura,
+        String mesAbertura,
         String municipio,
-        String segmento,
-        YearMonth dataAbertura,
-        int qtdAberturas
-) {}
+        String naturezaJuridica,
+        String regiao,
+        String opcaoMei,
+        String uf,
+        String porte,
+        String tipoSituacao,
+        int quantidadeEmpresas
+) {
+}
