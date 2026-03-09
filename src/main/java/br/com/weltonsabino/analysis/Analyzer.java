@@ -176,7 +176,7 @@ public class Analyzer {
         }
 
         JFreeChart chart = ChartFactory.createBarChart(
-                "Total de empresas abertas por mês em SC em 2025 (jan–nov)",
+                "Total de empresas abertas por mês em SC — 2025 (jan–nov)",
                 "Mês",
                 "Quantidade de empresas",
                 dataset,
