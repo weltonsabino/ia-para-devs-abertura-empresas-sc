@@ -1,10 +1,6 @@
 package br.com.weltonsabino.analysis;
 
-import br.com.weltonsabino.db.DuckDb;
-import org.knowm.xchart.BitmapEncoder;
-import org.knowm.xchart.CategoryChart;
-import org.knowm.xchart.CategoryChartBuilder;
-
+import java.awt.Color;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,6 +10,22 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartUtils;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.CategoryLabelPositions;
+import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
+import org.jfree.chart.plot.CategoryPlot;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.renderer.category.BarRenderer;
+import org.jfree.chart.renderer.category.StandardBarPainter;
+import org.jfree.data.category.DefaultCategoryDataset;
+import org.knowm.xchart.BitmapEncoder;
+import org.knowm.xchart.CategoryChart;
+import org.knowm.xchart.CategoryChartBuilder;
+
+import br.com.weltonsabino.db.DuckDb;
 
 public class Analyzer {
 
@@ -82,13 +94,47 @@ public class Analyzer {
                 LIMIT 10
                 """;
 
-        generateCategoryChart(
-                sql,
-                "Top 10 municípios por abertura de empresas",
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        Connection connection = db.connection();
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String municipio = rs.getString("municipio");
+                if (municipio != null) {
+                    municipio = municipio.replace(" - SC", "").trim();
+                }
+                int total = rs.getInt("total");
+                dataset.addValue(total, "Empresas abertas", municipio);
+            }
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Top 10 municípios de SC com mais empresas abertas em 2025",
                 "Município",
                 "Quantidade de empresas",
-                outputFile
+                dataset,
+                PlotOrientation.VERTICAL,
+                false,
+                false,
+                false
         );
+
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+
+        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+        renderer.setDefaultItemLabelsVisible(true);
+
+        plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.UP_45);
+        
+        renderer.setBarPainter(new StandardBarPainter());
+        chart.setBackgroundPaint(Color.white);
+        plot.setBackgroundPaint(Color.white);
+        
+        Path file = Path.of(outputFile.toString() + ".png");
+        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
     }
 
     private void generateAberturasPorMesChart(Path outputFile) throws SQLException, IOException {
