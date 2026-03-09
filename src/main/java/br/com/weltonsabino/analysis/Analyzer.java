@@ -281,16 +281,56 @@ public class Analyzer {
                 FROM empresas_abertas_sc
                 GROUP BY natureza_juridica
                 ORDER BY total DESC
-                LIMIT 10
+                LIMIT 5
                 """;
 
-        generateCategoryChart(
-                sql,
-                "Top naturezas jurídicas",
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        Connection connection = db.connection();
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String naturezaJuridica = rs.getString("natureza_juridica");
+                int total = rs.getInt("total");
+
+                if (naturezaJuridica != null) {
+                    naturezaJuridica = naturezaJuridica.trim();
+                }
+
+                dataset.addValue(total, "Empresas abertas", naturezaJuridica);
+            }
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Top naturezas jurídicas das empresas abertas em SC — 2025 (jan–nov)",
                 "Natureza jurídica",
                 "Quantidade de empresas",
-                outputFile
+                dataset,
+                PlotOrientation.HORIZONTAL,
+                false,
+                false,
+                false
         );
+
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+
+        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+        renderer.setDefaultItemLabelsVisible(true);
+        renderer.setBarPainter(new StandardBarPainter());
+        renderer.setSeriesPaint(0, new Color(255, 82, 82));
+        renderer.setMaximumBarWidth(0.15);
+        
+        chart.setBackgroundPaint(Color.white);
+        plot.setBackgroundPaint(Color.white);
+        plot.setRangeGridlinePaint(new Color(220,220,220));
+
+        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+        rangeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
+
+        Path file = Path.of(outputFile.toString() + ".png");
+        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1800, 1000);
     }
 
     private void generateCategoryChart(String sql, String title, String xAxisTitle, String yAxisTitle, Path outputFile)
