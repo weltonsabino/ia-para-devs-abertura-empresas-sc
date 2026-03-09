@@ -2,7 +2,7 @@ package br.com.weltonsabino;
 
 import br.com.weltonsabino.analysis.Analyzer;
 import br.com.weltonsabino.db.DuckDb;
-import br.com.weltonsabino.etl.CsvLoader;
+import br.com.weltonsabino.etl.ExcelLoader;
 import br.com.weltonsabino.etl.Cleaner;
 import br.com.weltonsabino.etl.Exporter;
 import br.com.weltonsabino.etl.Row;
@@ -14,12 +14,14 @@ public class App {
 
     public static void main(String[] args) {
         try {
-            Path rawCsv = Path.of("data/raw/abertura_empresas_sc.csv");
-            Path cleanedCsv = Path.of("data/processed/abertura_empresas_sc_clean.csv");
-            Path duckDbFile = Path.of("data/processed/abertura_empresas_sc.duckdb");
 
-            // 1) Load
-            List<Row> rawRows = CsvLoader.load(rawCsv);
+            Path rawExcel = Path.of("data/raw/empresas_abertas_sc_2025.xlsx");
+            Path cleanedCsv = Path.of("data/processed/empresas_abertas_sc_2025_clean.csv");
+            Path duckDbFile = Path.of("data/processed/empresas_abertas_sc_2025.duckdb");
+
+            // 1) Load Excel
+            ExcelLoader loader = new ExcelLoader();
+            List<Row> rawRows = loader.load(rawExcel.toString());
 
             // 2) Clean
             List<Row> cleanRows = Cleaner.clean(rawRows);

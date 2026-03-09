@@ -1,13 +1,17 @@
 package br.com.weltonsabino.analysis;
 
 import br.com.weltonsabino.db.DuckDb;
-import org.knowm.xchart.*;
-import org.knowm.xchart.style.Styler;
+import org.knowm.xchart.BitmapEncoder;
+import org.knowm.xchart.CategoryChart;
+import org.knowm.xchart.CategoryChartBuilder;
 
-import java.io.BufferedWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,156 +23,231 @@ public class Analyzer {
         this.db = db;
     }
 
-    public void generateSummary(Path out) throws Exception {
-        Files.createDirectories(out.getParent());
+    public void generateSummary(Path outputPath) throws IOException, SQLException {
+        if (outputPath.getParent() != null) {
+            Files.createDirectories(outputPath.getParent());
+        }
 
-        try (BufferedWriter w = Files.newBufferedWriter(out)) {
-            w.write("# Relatório - Abertura de Empresas em SC\n\n");
-            w.write("Este relatório foi gerado automaticamente a partir do dataset tratado e carregado no DuckDB.\n\n");
+        Connection connection = db.connection();
+        try (Statement stmt = connection.createStatement()) {
+            int totalLinhas = getInt(stmt, "SELECT COUNT(*) FROM empresas_abertas_sc");
+            int totalEmpresas = getInt(stmt, "SELECT SUM(quantidade_empresas) FROM empresas_abertas_sc");
+            int totalMunicipios = getInt(stmt, "SELECT COUNT(DISTINCT municipio) FROM empresas_abertas_sc");
 
-            // Total
-            int total = singleInt("SELECT SUM(qtd_aberturas) AS total FROM aberturas_empresas_sc");
-            w.write("## Visão geral\n");
-            w.write("- Total de aberturas no recorte do dataset: **" + total + "**\n\n");
+            List<String> topMunicipios = getTopMunicipios(stmt);
+            List<String> topNaturezas = getTopNaturezas(stmt);
 
-            // Top municípios
-            w.write("## Top 10 municípios por aberturas\n");
-            try (ResultSet rs = db.query("""
-                    SELECT municipio, SUM(qtd_aberturas) AS total
-                    FROM aberturas_empresas_sc
-                    GROUP BY municipio
-                    ORDER BY total DESC
-                    LIMIT 10
-            """)) {
-                while (rs.next()) {
-                    w.write("- " + rs.getString("municipio") + ": **" + rs.getInt("total") + "**\n");
-                }
+            StringBuilder sb = new StringBuilder();
+            sb.append("# Resumo da análise de abertura de empresas em SC (2025)\n\n");
+            sb.append("## Visão geral\n\n");
+            sb.append("- Total de linhas analisadas: ").append(totalLinhas).append("\n");
+            sb.append("- Total de empresas abertas: ").append(totalEmpresas).append("\n");
+            sb.append("- Total de municípios com registros: ").append(totalMunicipios).append("\n\n");
+
+            sb.append("## Top 5 municípios com mais aberturas\n\n");
+            for (String linha : topMunicipios) {
+                sb.append("- ").append(linha).append("\n");
             }
-            w.write("\n");
 
-            // Segmentos
-            w.write("## Aberturas por segmento\n");
-            try (ResultSet rs = db.query("""
-                    SELECT segmento, SUM(qtd_aberturas) AS total
-                    FROM aberturas_empresas_sc
-                    GROUP BY segmento
-                    ORDER BY total DESC
-            """)) {
-                while (rs.next()) {
-                    w.write("- " + rs.getString("segmento") + ": **" + rs.getInt("total") + "**\n");
-                }
+            sb.append("\n## Top 5 naturezas jurídicas\n\n");
+            for (String linha : topNaturezas) {
+                sb.append("- ").append(linha).append("\n");
             }
-            w.write("\n");
 
-            // Observações
-            w.write("## Observações\n");
-            w.write("- O objetivo é apoiar análise exploratória: ranking por município, distribuição por segmento e evolução temporal.\n");
-            w.write("- Próximos passos possíveis: ampliar período, adicionar CNAE/porte e comparar tendências por região.\n");
+            sb.append("\n## Observações\n\n");
+            sb.append("- Os dados foram exportados do painel Mapa de Empresas, com filtro para Santa Catarina e meses de 2025.\n");
+            sb.append("- A linha de totais foi removida no processo de ingestão.\n");
+            sb.append("- O dataset tratado mantém apenas registros válidos com UF = SC e quantidade de empresas maior que zero.\n");
+
+            Files.writeString(outputPath, sb.toString());
         }
     }
 
-    public void generateCharts(Path figuresDir) throws Exception {
-        Files.createDirectories(figuresDir);
+    public void generateCharts(Path outputDir) throws IOException, SQLException {
+        Files.createDirectories(outputDir);
 
-        chartSegmentos(figuresDir.resolve("segmentos.png"));
-        chartTopMunicipios(figuresDir.resolve("top_municipios.png"));
-        chartEvolucaoMensal(figuresDir.resolve("evolucao_mensal.png"));
+        generateTopMunicipiosChart(outputDir.resolve("top10_municipios"));
+        generateAberturasPorMesChart(outputDir.resolve("aberturas_por_mes"));
+        generateMeiChart(outputDir.resolve("mei_vs_nao_mei"));
+        generatePorteChart(outputDir.resolve("porte_empresas"));
+        generateNaturezaChart(outputDir.resolve("natureza_juridica"));
     }
 
-    private void chartSegmentos(Path out) throws Exception {
-        List<String> labels = new ArrayList<>();
-        List<Integer> values = new ArrayList<>();
-
-        try (ResultSet rs = db.query("""
-                SELECT segmento, SUM(qtd_aberturas) AS total
-                FROM aberturas_empresas_sc
-                GROUP BY segmento
-                ORDER BY total DESC
-        """)) {
-            while (rs.next()) {
-                labels.add(rs.getString("segmento"));
-                values.add(rs.getInt("total"));
-            }
-        }
-
-        CategoryChart chart = new CategoryChartBuilder()
-                .width(900).height(500)
-                .title("Aberturas por Segmento (SC)")
-                .xAxisTitle("Segmento")
-                .yAxisTitle("Aberturas")
-                .build();
-
-        chart.getStyler().setLegendPosition(Styler.LegendPosition.InsideNE);
-
-        chart.addSeries("Aberturas", labels, values);
-        BitmapEncoder.saveBitmap(chart, out.toString(), BitmapEncoder.BitmapFormat.PNG);
-    }
-
-    private void chartTopMunicipios(Path out) throws Exception {
-        List<String> labels = new ArrayList<>();
-        List<Integer> values = new ArrayList<>();
-
-        try (ResultSet rs = db.query("""
-                SELECT municipio, SUM(qtd_aberturas) AS total
-                FROM aberturas_empresas_sc
+    private void generateTopMunicipiosChart(Path outputFile) throws SQLException, IOException {
+        String sql = """
+                SELECT municipio, SUM(quantidade_empresas) AS total
+                FROM empresas_abertas_sc
                 GROUP BY municipio
                 ORDER BY total DESC
                 LIMIT 10
-        """)) {
+                """;
+
+        generateCategoryChart(
+                sql,
+                "Top 10 municípios por abertura de empresas",
+                "Município",
+                "Quantidade de empresas",
+                outputFile
+        );
+    }
+
+    private void generateAberturasPorMesChart(Path outputFile) throws SQLException, IOException {
+        String sql = """
+                SELECT mes_abertura, SUM(quantidade_empresas) AS total
+                FROM empresas_abertas_sc
+                GROUP BY mes_abertura
+                ORDER BY
+                    CASE mes_abertura
+                        WHEN 'Janeiro' THEN 1
+                        WHEN 'Fevereiro' THEN 2
+                        WHEN 'Março' THEN 3
+                        WHEN 'Abril' THEN 4
+                        WHEN 'Maio' THEN 5
+                        WHEN 'Junho' THEN 6
+                        WHEN 'Julho' THEN 7
+                        WHEN 'Agosto' THEN 8
+                        WHEN 'Setembro' THEN 9
+                        WHEN 'Outubro' THEN 10
+                        WHEN 'Novembro' THEN 11
+                        WHEN 'Dezembro' THEN 12
+                    END
+                """;
+
+        generateCategoryChart(
+                sql,
+                "Aberturas de empresas por mês em 2025",
+                "Mês",
+                "Quantidade de empresas",
+                outputFile
+        );
+    }
+
+    private void generateMeiChart(Path outputFile) throws SQLException, IOException {
+        String sql = """
+                SELECT opcao_mei, SUM(quantidade_empresas) AS total
+                FROM empresas_abertas_sc
+                GROUP BY opcao_mei
+                ORDER BY total DESC
+                """;
+
+        generateCategoryChart(
+                sql,
+                "Distribuição por opção MEI",
+                "Opção MEI",
+                "Quantidade de empresas",
+                outputFile
+        );
+    }
+
+    private void generatePorteChart(Path outputFile) throws SQLException, IOException {
+        String sql = """
+                SELECT porte, SUM(quantidade_empresas) AS total
+                FROM empresas_abertas_sc
+                GROUP BY porte
+                ORDER BY total DESC
+                """;
+
+        generateCategoryChart(
+                sql,
+                "Distribuição por porte",
+                "Porte",
+                "Quantidade de empresas",
+                outputFile
+        );
+    }
+
+    private void generateNaturezaChart(Path outputFile) throws SQLException, IOException {
+        String sql = """
+                SELECT natureza_juridica, SUM(quantidade_empresas) AS total
+                FROM empresas_abertas_sc
+                GROUP BY natureza_juridica
+                ORDER BY total DESC
+                LIMIT 10
+                """;
+
+        generateCategoryChart(
+                sql,
+                "Top naturezas jurídicas",
+                "Natureza jurídica",
+                "Quantidade de empresas",
+                outputFile
+        );
+    }
+
+    private void generateCategoryChart(String sql, String title, String xAxisTitle, String yAxisTitle, Path outputFile)
+            throws SQLException, IOException {
+
+        List<String> labels = new ArrayList<>();
+        List<Integer> values = new ArrayList<>();
+
+        Connection connection = db.connection();
+        try (Statement stmt = connection.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                labels.add(rs.getString("municipio"));
-                values.add(rs.getInt("total"));
+                labels.add(rs.getString(1));
+                values.add(rs.getInt(2));
             }
         }
 
         CategoryChart chart = new CategoryChartBuilder()
-                .width(1000).height(550)
-                .title("Top 10 Municípios por Aberturas (SC)")
-                .xAxisTitle("Município")
-                .yAxisTitle("Aberturas")
+                .width(1200)
+                .height(700)
+                .title(title)
+                .xAxisTitle(xAxisTitle)
+                .yAxisTitle(yAxisTitle)
                 .build();
 
-        chart.getStyler().setLegendVisible(false);
-        chart.getStyler().setXAxisLabelRotation(45);
+        chart.addSeries(title, labels, values);
 
-        chart.addSeries("Aberturas", labels, values);
-        BitmapEncoder.saveBitmap(chart, out.toString(), BitmapEncoder.BitmapFormat.PNG);
+        BitmapEncoder.saveBitmap(chart, outputFile.toString(), BitmapEncoder.BitmapFormat.PNG);
     }
 
-    private void chartEvolucaoMensal(Path out) throws Exception {
-        List<String> meses = new ArrayList<>();
-        List<Integer> total = new ArrayList<>();
+    private int getInt(Statement stmt, String sql) throws SQLException {
+        try (ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+            return 0;
+        }
+    }
 
-        try (ResultSet rs = db.query("""
-                SELECT strftime('%Y-%m', data_abertura) AS mes, SUM(qtd_aberturas) AS total
-                FROM aberturas_empresas_sc
-                GROUP BY mes
-                ORDER BY mes
-        """)) {
+    private List<String> getTopMunicipios(Statement stmt) throws SQLException {
+        String sql = """
+                SELECT municipio, SUM(quantidade_empresas) AS total
+                FROM empresas_abertas_sc
+                GROUP BY municipio
+                ORDER BY total DESC
+                LIMIT 5
+                """;
+
+        List<String> resultado = new ArrayList<>();
+
+        try (ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                meses.add(rs.getString("mes"));
-                total.add(rs.getInt("total"));
+                resultado.add(rs.getString("municipio") + ": " + rs.getInt("total"));
             }
         }
 
-        CategoryChart chart = new CategoryChartBuilder()
-                .width(900).height(500)
-                .title("Evolução Mensal de Aberturas (SC)")
-                .xAxisTitle("Mês")
-                .yAxisTitle("Aberturas")
-                .build();
-
-        chart.getStyler().setLegendVisible(false);
-        chart.getStyler().setXAxisLabelRotation(45);
-
-        chart.addSeries("Aberturas", meses, total);
-        BitmapEncoder.saveBitmap(chart, out.toString(), BitmapEncoder.BitmapFormat.PNG);
+        return resultado;
     }
 
-    private int singleInt(String sql) throws Exception {
-        try (ResultSet rs = db.query(sql)) {
-            if (rs.next()) return rs.getInt(1);
+    private List<String> getTopNaturezas(Statement stmt) throws SQLException {
+        String sql = """
+                SELECT natureza_juridica, SUM(quantidade_empresas) AS total
+                FROM empresas_abertas_sc
+                GROUP BY natureza_juridica
+                ORDER BY total DESC
+                LIMIT 5
+                """;
+
+        List<String> resultado = new ArrayList<>();
+
+        try (ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                resultado.add(rs.getString("natureza_juridica") + ": " + rs.getInt("total"));
+            }
         }
-        return 0;
+
+        return resultado;
     }
 }
