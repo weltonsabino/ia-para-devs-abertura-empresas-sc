@@ -33,13 +33,6 @@
             <artifactId>commons-csv</artifactId>
             <version>1.10.0</version>
         </dependency>
-
-        <!-- XChart para gráficos -->
-        <dependency>
-            <groupId>org.knowm.xchart</groupId>
-            <artifactId>xchart</artifactId>
-            <version>3.8.5</version>
-        </dependency>
         
         <!-- JFreeChart para gráficos -->
 		<dependency>

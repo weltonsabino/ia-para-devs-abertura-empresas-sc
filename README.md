@@ -47,7 +47,6 @@ Os dados foram exportados em formato Excel e utilizados como base para o pipelin
 - Apache POI (leitura de arquivos Excel)
 - DuckDB (banco analítico embarcado)
 - JFreeChart (gráficos com rótulos de valores)
-- XChart (geração de gráficos)
 - Git / GitHub (versionamento)
 
 ## Estrutura do projeto
@@ -123,7 +122,6 @@ Como resultado, o pipeline produz dois tipos de artefatos analíticos:
 Os gráficos são gerados utilizando bibliotecas Java de visualização de dados:
 
 - **JFreeChart** – utilizado para gráficos de barras com rótulos de valores
-- **XChart** – utilizado para alguns gráficos analíticos auxiliares
 
 ## Resultados gerados
 

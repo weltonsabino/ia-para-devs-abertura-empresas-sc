@@ -23,9 +23,6 @@ import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.category.StandardBarPainter;
 import org.jfree.data.category.DefaultCategoryDataset;
-import org.knowm.xchart.BitmapEncoder;
-import org.knowm.xchart.CategoryChart;
-import org.knowm.xchart.CategoryChartBuilder;
 
 import br.com.weltonsabino.db.DuckDb;
 
@@ -381,34 +378,6 @@ public class Analyzer {
 
         Path file = Path.of(outputFile.toString() + ".png");
         ChartUtils.saveChartAsPNG(file.toFile(), chart, 1800, 1000);
-    }
-
-    private void generateCategoryChart(String sql, String title, String xAxisTitle, String yAxisTitle, Path outputFile)
-            throws SQLException, IOException {
-
-        List<String> labels = new ArrayList<>();
-        List<Integer> values = new ArrayList<>();
-
-        Connection connection = db.connection();
-        try (Statement stmt = connection.createStatement();
-                ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                labels.add(rs.getString(1));
-                values.add(rs.getInt(2));
-            }
-        }
-
-        CategoryChart chart = new CategoryChartBuilder()
-                .width(1200)
-                .height(700)
-                .title(title)
-                .xAxisTitle(xAxisTitle)
-                .yAxisTitle(yAxisTitle)
-                .build();
-
-        chart.addSeries(title, labels, values);
-
-        BitmapEncoder.saveBitmap(chart, outputFile.toString(), BitmapEncoder.BitmapFormat.PNG);
     }
 
     private int getInt(Statement stmt, String sql) throws SQLException {
