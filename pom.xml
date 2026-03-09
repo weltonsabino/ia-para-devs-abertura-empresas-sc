@@ -40,7 +40,14 @@
             <artifactId>xchart</artifactId>
             <version>3.8.5</version>
         </dependency>
-
+        
+        <!-- JFreeChart para gráficos -->
+		<dependency>
+   			<groupId>org.jfree</groupId>
+    		<artifactId>jfreechart</artifactId>
+		    <version>1.5.3</version>
+		</dependency>
+		
         <!-- SLF4J simples (logs básicos) -->
         <dependency>
             <groupId>org.slf4j</groupId>
