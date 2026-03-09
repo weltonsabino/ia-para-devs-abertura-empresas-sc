@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,6 +16,7 @@ import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.CategoryLabelPositions;
+import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
@@ -208,13 +210,52 @@ public class Analyzer {
                 ORDER BY total DESC
                 """;
 
-        generateCategoryChart(
-                sql,
-                "Distribuição por opção MEI",
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        Connection connection = db.connection();
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String opcaoMei = rs.getString("opcao_mei");
+                int total = rs.getInt("total");
+
+                if (opcaoMei != null) {
+                    opcaoMei = opcaoMei.trim();
+                }
+
+                dataset.addValue(total, "Empresas abertas", opcaoMei);
+            }
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Distribuição de empresas abertas por opção MEI em SC — 2025 (jan–nov)",
                 "Opção MEI",
                 "Quantidade de empresas",
-                outputFile
+                dataset,
+                PlotOrientation.VERTICAL,
+                false,
+                false,
+                false
         );
+
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+
+        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+        renderer.setDefaultItemLabelsVisible(true);
+        renderer.setBarPainter(new StandardBarPainter());
+
+        renderer.setMaximumBarWidth(0.35);
+
+        chart.setBackgroundPaint(Color.white);
+        plot.setBackgroundPaint(Color.white);
+
+        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+        rangeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
+
+        Path file = Path.of(outputFile.toString() + ".png");
+        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
     }
 
     private void generatePorteChart(Path outputFile) throws SQLException, IOException {
