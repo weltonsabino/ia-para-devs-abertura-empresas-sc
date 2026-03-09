@@ -260,19 +260,69 @@ public class Analyzer {
 
     private void generatePorteChart(Path outputFile) throws SQLException, IOException {
         String sql = """
-                SELECT porte, SUM(quantidade_empresas) AS total
+                SELECT
+                    CASE
+                        WHEN porte = 'Microempresa' THEN 'Microempresa'
+                        WHEN porte = 'Empresa de pequeno porte' THEN 'Empresa de pequeno porte'
+                        ELSE 'Outras'
+                    END AS porte_agrupado,
+                    SUM(quantidade_empresas) AS total
                 FROM empresas_abertas_sc
-                GROUP BY porte
-                ORDER BY total DESC
+                GROUP BY
+                    CASE
+                        WHEN porte = 'Microempresa' THEN 'Microempresa'
+                        WHEN porte = 'Empresa de pequeno porte' THEN 'Empresa de pequeno porte'
+                        ELSE 'Outras'
+                    END
+                ORDER BY
+                    CASE
+                        WHEN porte_agrupado = 'Microempresa' THEN 1
+                        WHEN porte_agrupado = 'Empresa de pequeno porte' THEN 2
+                        WHEN porte_agrupado = 'Outras' THEN 3
+                    END
                 """;
 
-        generateCategoryChart(
-                sql,
-                "Distribuição por porte",
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        Connection connection = db.connection();
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String porte = rs.getString("porte_agrupado");
+                int total = rs.getInt("total");
+                dataset.addValue(total, "Empresas abertas", porte);
+            }
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Distribuição das empresas abertas por porte em SC — 2025 (jan–nov)",
                 "Porte",
                 "Quantidade de empresas",
-                outputFile
+                dataset,
+                PlotOrientation.VERTICAL,
+                false,
+                false,
+                false
         );
+
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+
+        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+        renderer.setDefaultItemLabelsVisible(true);
+        renderer.setBarPainter(new StandardBarPainter());
+        renderer.setSeriesPaint(0, new Color(255, 82, 82));
+
+        chart.setBackgroundPaint(Color.white);
+        plot.setBackgroundPaint(Color.white);
+        plot.setRangeGridlinePaint(new Color(220, 220, 220));
+
+        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+        rangeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
+
+        Path file = Path.of(outputFile.toString() + ".png");
+        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
     }
 
     private void generateNaturezaChart(Path outputFile) throws SQLException, IOException {
