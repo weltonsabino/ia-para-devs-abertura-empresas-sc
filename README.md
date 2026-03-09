@@ -1,14 +1,14 @@
-# Análise de Abertura de Empresas em Santa Catarina (2025)
+# Análise de Abertura de Empresas em Santa Catarina (Jan-Nov 2025)
 
 Projeto desenvolvido como parte do **desafio prático da trilha IA para DEVs – Programa SCTEC**.
 
-O objetivo deste projeto é construir um pipeline de tratamento e análise de dados utilizando informações públicas sobre abertura de empresas em Santa Catarina no ano de 2025.
+O objetivo deste projeto é construir um pipeline de tratamento e análise de dados utilizando informações públicas sobre abertura de empresas em Santa Catarina no ano de 2025 (Jan-Nov).
 
 A solução realiza ingestão de dados em formato Excel, limpeza e padronização das informações, armazenamento em banco analítico e geração de análises e visualizações.
 
 ## Objetivo do projeto
 
-O projeto busca analisar o cenário de empreendedorismo em Santa Catarina a partir da abertura de empresas em 2025.
+O projeto busca analisar o cenário de empreendedorismo em Santa Catarina a partir da abertura de empresas em 2025 (Jan-Nov).
 
 A solução implementa um pipeline de dados que realiza:
 
@@ -34,7 +34,9 @@ https://www.gov.br/empresas-e-negocios/pt-br/mapa-de-empresas/painel-mapa-de-emp
 Filtros utilizados na extração dos dados:
 
 - UF: Santa Catarina (SC)
-- Período: todos os meses de 2025
+- Período: Janeiro a Novembro de 2025
+
+Obs: A base pública utilizada não contempla dados de dezembro de 2025.
 
 Os dados foram exportados em formato Excel e utilizados como base para o pipeline de análise.
 
@@ -44,7 +46,7 @@ Os dados foram exportados em formato Excel e utilizados como base para o pipelin
 - Maven
 - Apache POI (leitura de arquivos Excel)
 - DuckDB (banco analítico embarcado)
-- XChart (geração de gráficos)
+- JFreeChart (gráficos com rótulos de valores)
 - Git / GitHub (versionamento)
 
 ## Estrutura do projeto
@@ -110,35 +112,50 @@ Os dados tratados são carregados em um banco analítico local utilizando **Duck
 
 ### 5. Análise e visualização
 
-O projeto executa consultas analíticas e gera:
+Após o carregamento dos dados no DuckDB, o projeto executa consultas analíticas para gerar indicadores sobre a abertura de empresas em Santa Catarina no ano de 2025 (Jan-Nov).
 
-- relatório em Markdown
-- gráficos em formato PNG
+Como resultado, o pipeline produz dois tipos de artefatos analíticos:
 
-Os resultados são armazenados na pasta:
+- **Relatório em Markdown**, contendo um resumo das principais métricas e resultados da análise
+- **Gráficos analíticos em formato PNG**, que facilitam a visualização e interpretação dos dados
 
-```text
-reports/
-```
+Os gráficos são gerados utilizando bibliotecas Java de visualização de dados:
+
+- **JFreeChart** – utilizado para gráficos de barras com rótulos de valores
 
 ## Resultados gerados
 
 Após a execução do pipeline são produzidos os seguintes artefatos:
 
 ```text
-data/processed/empresas_abertas_sc_2025_clean.csv
-data/processed/empresas_abertas_sc_2025.duckdb
-reports/summary.md
-reports/figures/*.png
+data/
+└── processed/
+│   ├── empresas_abertas_sc_2025_clean.csv
+│   └── empresas_abertas_sc_2025.duckdb
+
+reports/
+├── summary.md
+└── figures/
+    └── *.png
 ```
 
 Entre as análises produzidas estão:
 
-- Top municípios com mais aberturas de empresas
+- Top 10 municípios com mais aberturas de empresas
 - Aberturas de empresas por mês
 - Distribuição por opção MEI
 - Distribuição por porte empresarial
 - Principais naturezas jurídicas
+
+## Exemplos de visualizações
+
+### Aberturas de empresas por mês
+
+![Aberturas por mês](reports/figures/aberturas_por_mes.png)
+
+### Top 10 municípios
+
+![Top 10 municípios](reports/figures/top10_municipios.png)
 
 ## Como executar o projeto
 

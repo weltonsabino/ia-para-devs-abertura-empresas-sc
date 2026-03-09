@@ -1,10 +1,6 @@
 package br.com.weltonsabino.analysis;
 
-import br.com.weltonsabino.db.DuckDb;
-import org.knowm.xchart.BitmapEncoder;
-import org.knowm.xchart.CategoryChart;
-import org.knowm.xchart.CategoryChartBuilder;
-
+import java.awt.Color;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,8 +8,23 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartUtils;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.CategoryLabelPositions;
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
+import org.jfree.chart.plot.CategoryPlot;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.renderer.category.BarRenderer;
+import org.jfree.chart.renderer.category.StandardBarPainter;
+import org.jfree.data.category.DefaultCategoryDataset;
+
+import br.com.weltonsabino.db.DuckDb;
 
 public class Analyzer {
 
@@ -38,7 +49,7 @@ public class Analyzer {
             List<String> topNaturezas = getTopNaturezas(stmt);
 
             StringBuilder sb = new StringBuilder();
-            sb.append("# Resumo da análise de abertura de empresas em SC (2025)\n\n");
+            sb.append("# Resumo da análise de abertura de empresas em SC em 2025 (jan–nov)\n\n");
             sb.append("## Visão geral\n\n");
             sb.append("- Total de linhas analisadas: ").append(totalLinhas).append("\n");
             sb.append("- Total de empresas abertas: ").append(totalEmpresas).append("\n");
@@ -55,7 +66,8 @@ public class Analyzer {
             }
 
             sb.append("\n## Observações\n\n");
-            sb.append("- Os dados foram exportados do painel Mapa de Empresas, com filtro para Santa Catarina e meses de 2025.\n");
+            sb.append("- Os dados foram exportados do painel Mapa de Empresas, com filtro para Santa Catarina e meses de 2025 (Jan-Nov).\n");
+            sb.append("- A base pública utilizada não contempla dados de dezembro de 2025.\n");
             sb.append("- A linha de totais foi removida no processo de ingestão.\n");
             sb.append("- O dataset tratado mantém apenas registros válidos com UF = SC e quantidade de empresas maior que zero.\n");
 
@@ -82,13 +94,47 @@ public class Analyzer {
                 LIMIT 10
                 """;
 
-        generateCategoryChart(
-                sql,
-                "Top 10 municípios por abertura de empresas",
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        Connection connection = db.connection();
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String municipio = rs.getString("municipio");
+                if (municipio != null) {
+                    municipio = municipio.replace(" - SC", "").trim();
+                }
+                int total = rs.getInt("total");
+                dataset.addValue(total, "Empresas abertas", municipio);
+            }
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Top 10 municípios de SC com mais empresas abertas em 2025 (jan–nov)",
                 "Município",
                 "Quantidade de empresas",
-                outputFile
+                dataset,
+                PlotOrientation.VERTICAL,
+                false,
+                false,
+                false
         );
+
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+
+        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+        renderer.setDefaultItemLabelsVisible(true);
+
+        plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.UP_45);
+        
+        renderer.setBarPainter(new StandardBarPainter());
+        chart.setBackgroundPaint(Color.white);
+        plot.setBackgroundPaint(Color.white);
+        
+        Path file = Path.of(outputFile.toString() + ".png");
+        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
     }
 
     private void generateAberturasPorMesChart(Path outputFile) throws SQLException, IOException {
@@ -113,13 +159,44 @@ public class Analyzer {
                     END
                 """;
 
-        generateCategoryChart(
-                sql,
-                "Aberturas de empresas por mês em 2025",
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        Connection connection = db.connection();
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String mes = rs.getString("mes_abertura");
+                int total = rs.getInt("total");
+                dataset.addValue(total, "Empresas abertas", mes);
+            }
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Total de empresas abertas por mês em SC — 2025 (jan–nov)",
                 "Mês",
                 "Quantidade de empresas",
-                outputFile
+                dataset,
+                PlotOrientation.VERTICAL,
+                false,
+                false,
+                false
         );
+
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+
+        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+        renderer.setDefaultItemLabelsVisible(true);
+        renderer.setBarPainter(new StandardBarPainter());
+
+        chart.setBackgroundPaint(Color.white);
+        plot.setBackgroundPaint(Color.white);
+
+        plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.STANDARD);
+
+        Path file = Path.of(outputFile.toString() + ".png");
+        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
     }
 
     private void generateMeiChart(Path outputFile) throws SQLException, IOException {
@@ -130,30 +207,119 @@ public class Analyzer {
                 ORDER BY total DESC
                 """;
 
-        generateCategoryChart(
-                sql,
-                "Distribuição por opção MEI",
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        Connection connection = db.connection();
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String opcaoMei = rs.getString("opcao_mei");
+                int total = rs.getInt("total");
+
+                if (opcaoMei != null) {
+                    opcaoMei = opcaoMei.trim();
+                }
+
+                dataset.addValue(total, "Empresas abertas", opcaoMei);
+            }
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Distribuição de empresas abertas por opção MEI em SC — 2025 (jan–nov)",
                 "Opção MEI",
                 "Quantidade de empresas",
-                outputFile
+                dataset,
+                PlotOrientation.VERTICAL,
+                false,
+                false,
+                false
         );
+
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+
+        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+        renderer.setDefaultItemLabelsVisible(true);
+        renderer.setBarPainter(new StandardBarPainter());
+
+        renderer.setMaximumBarWidth(0.35);
+
+        chart.setBackgroundPaint(Color.white);
+        plot.setBackgroundPaint(Color.white);
+
+        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+        rangeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
+
+        Path file = Path.of(outputFile.toString() + ".png");
+        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
     }
 
     private void generatePorteChart(Path outputFile) throws SQLException, IOException {
         String sql = """
-                SELECT porte, SUM(quantidade_empresas) AS total
+                SELECT
+                    CASE
+                        WHEN porte = 'Microempresa' THEN 'Microempresa'
+                        WHEN porte = 'Empresa de pequeno porte' THEN 'Empresa de pequeno porte'
+                        ELSE 'Outras'
+                    END AS porte_agrupado,
+                    SUM(quantidade_empresas) AS total
                 FROM empresas_abertas_sc
-                GROUP BY porte
-                ORDER BY total DESC
+                GROUP BY
+                    CASE
+                        WHEN porte = 'Microempresa' THEN 'Microempresa'
+                        WHEN porte = 'Empresa de pequeno porte' THEN 'Empresa de pequeno porte'
+                        ELSE 'Outras'
+                    END
+                ORDER BY
+                    CASE
+                        WHEN porte_agrupado = 'Microempresa' THEN 1
+                        WHEN porte_agrupado = 'Empresa de pequeno porte' THEN 2
+                        WHEN porte_agrupado = 'Outras' THEN 3
+                    END
                 """;
 
-        generateCategoryChart(
-                sql,
-                "Distribuição por porte",
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        Connection connection = db.connection();
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String porte = rs.getString("porte_agrupado");
+                int total = rs.getInt("total");
+                dataset.addValue(total, "Empresas abertas", porte);
+            }
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Distribuição das empresas abertas por porte em SC — 2025 (jan–nov)",
                 "Porte",
                 "Quantidade de empresas",
-                outputFile
+                dataset,
+                PlotOrientation.VERTICAL,
+                false,
+                false,
+                false
         );
+
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+
+        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+        renderer.setDefaultItemLabelsVisible(true);
+        renderer.setBarPainter(new StandardBarPainter());
+        renderer.setSeriesPaint(0, new Color(255, 82, 82));
+
+        chart.setBackgroundPaint(Color.white);
+        plot.setBackgroundPaint(Color.white);
+        plot.setRangeGridlinePaint(new Color(220, 220, 220));
+
+        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+        rangeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
+
+        Path file = Path.of(outputFile.toString() + ".png");
+        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
     }
 
     private void generateNaturezaChart(Path outputFile) throws SQLException, IOException {
@@ -162,44 +328,56 @@ public class Analyzer {
                 FROM empresas_abertas_sc
                 GROUP BY natureza_juridica
                 ORDER BY total DESC
-                LIMIT 10
+                LIMIT 5
                 """;
 
-        generateCategoryChart(
-                sql,
-                "Top naturezas jurídicas",
-                "Natureza jurídica",
-                "Quantidade de empresas",
-                outputFile
-        );
-    }
-
-    private void generateCategoryChart(String sql, String title, String xAxisTitle, String yAxisTitle, Path outputFile)
-            throws SQLException, IOException {
-
-        List<String> labels = new ArrayList<>();
-        List<Integer> values = new ArrayList<>();
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
         Connection connection = db.connection();
         try (Statement stmt = connection.createStatement();
-                ResultSet rs = stmt.executeQuery(sql)) {
+             ResultSet rs = stmt.executeQuery(sql)) {
+
             while (rs.next()) {
-                labels.add(rs.getString(1));
-                values.add(rs.getInt(2));
+                String naturezaJuridica = rs.getString("natureza_juridica");
+                int total = rs.getInt("total");
+
+                if (naturezaJuridica != null) {
+                    naturezaJuridica = naturezaJuridica.trim();
+                }
+
+                dataset.addValue(total, "Empresas abertas", naturezaJuridica);
             }
         }
 
-        CategoryChart chart = new CategoryChartBuilder()
-                .width(1200)
-                .height(700)
-                .title(title)
-                .xAxisTitle(xAxisTitle)
-                .yAxisTitle(yAxisTitle)
-                .build();
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Top naturezas jurídicas das empresas abertas em SC — 2025 (jan–nov)",
+                "Natureza jurídica",
+                "Quantidade de empresas",
+                dataset,
+                PlotOrientation.HORIZONTAL,
+                false,
+                false,
+                false
+        );
 
-        chart.addSeries(title, labels, values);
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
 
-        BitmapEncoder.saveBitmap(chart, outputFile.toString(), BitmapEncoder.BitmapFormat.PNG);
+        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+        renderer.setDefaultItemLabelsVisible(true);
+        renderer.setBarPainter(new StandardBarPainter());
+        renderer.setSeriesPaint(0, new Color(255, 82, 82));
+        renderer.setMaximumBarWidth(0.15);
+        
+        chart.setBackgroundPaint(Color.white);
+        plot.setBackgroundPaint(Color.white);
+        plot.setRangeGridlinePaint(new Color(220,220,220));
+
+        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+        rangeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
+
+        Path file = Path.of(outputFile.toString() + ".png");
+        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1800, 1000);
     }
 
     private int getInt(Statement stmt, String sql) throws SQLException {
