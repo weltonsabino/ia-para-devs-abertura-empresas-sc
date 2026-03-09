@@ -159,13 +159,44 @@ public class Analyzer {
                     END
                 """;
 
-        generateCategoryChart(
-                sql,
-                "Aberturas de empresas por mês em 2025",
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        Connection connection = db.connection();
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                String mes = rs.getString("mes_abertura");
+                int total = rs.getInt("total");
+                dataset.addValue(total, "Empresas abertas", mes);
+            }
+        }
+
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Total de empresas abertas por mês em SC em 2025 (jan–nov)",
                 "Mês",
                 "Quantidade de empresas",
-                outputFile
+                dataset,
+                PlotOrientation.VERTICAL,
+                false,
+                false,
+                false
         );
+
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+
+        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+        renderer.setDefaultItemLabelsVisible(true);
+        renderer.setBarPainter(new StandardBarPainter());
+
+        chart.setBackgroundPaint(Color.white);
+        plot.setBackgroundPaint(Color.white);
+
+        plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.STANDARD);
+
+        Path file = Path.of(outputFile.toString() + ".png");
+        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
     }
 
     private void generateMeiChart(Path outputFile) throws SQLException, IOException {
