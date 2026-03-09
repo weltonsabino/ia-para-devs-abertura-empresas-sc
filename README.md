@@ -141,11 +141,21 @@ reports/
 
 Entre as análises produzidas estão:
 
-- Top municípios com mais aberturas de empresas
+- Top 10 municípios com mais aberturas de empresas
 - Aberturas de empresas por mês
 - Distribuição por opção MEI
 - Distribuição por porte empresarial
 - Principais naturezas jurídicas
+
+## Exemplos de visualizações
+
+### Aberturas de empresas por mês
+
+![Aberturas por mês](reports/figures/aberturas_por_mes.png)
+
+### Top 10 municípios
+
+![Top 10 municípios](reports/figures/top10_municipios.png)
 
 ## Como executar o projeto
 
