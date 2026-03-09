@@ -1,4 +1,4 @@
-# Resumo da análise de abertura de empresas em SC (2025)
+# Resumo da análise de abertura de empresas em SC em 2025 (jan–nov)
 
 ## Visão geral
 
@@ -24,6 +24,7 @@
 
 ## Observações
 
-- Os dados foram exportados do painel Mapa de Empresas, com filtro para Santa Catarina e meses de 2025.
+- Os dados foram exportados do painel Mapa de Empresas, com filtro para Santa Catarina e meses de 2025 (Jan-Nov).
+- A base pública utilizada não contempla dados de dezembro de 2025.
 - A linha de totais foi removida no processo de ingestão.
 - O dataset tratado mantém apenas registros válidos com UF = SC e quantidade de empresas maior que zero.

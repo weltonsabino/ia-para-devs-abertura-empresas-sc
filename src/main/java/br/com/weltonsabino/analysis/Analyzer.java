@@ -50,7 +50,7 @@ public class Analyzer {
             List<String> topNaturezas = getTopNaturezas(stmt);
 
             StringBuilder sb = new StringBuilder();
-            sb.append("# Resumo da análise de abertura de empresas em SC (2025)\n\n");
+            sb.append("# Resumo da análise de abertura de empresas em SC em 2025 (jan–nov)\n\n");
             sb.append("## Visão geral\n\n");
             sb.append("- Total de linhas analisadas: ").append(totalLinhas).append("\n");
             sb.append("- Total de empresas abertas: ").append(totalEmpresas).append("\n");
@@ -67,7 +67,8 @@ public class Analyzer {
             }
 
             sb.append("\n## Observações\n\n");
-            sb.append("- Os dados foram exportados do painel Mapa de Empresas, com filtro para Santa Catarina e meses de 2025.\n");
+            sb.append("- Os dados foram exportados do painel Mapa de Empresas, com filtro para Santa Catarina e meses de 2025 (Jan-Nov).\n");
+            sb.append("- A base pública utilizada não contempla dados de dezembro de 2025.\n");
             sb.append("- A linha de totais foi removida no processo de ingestão.\n");
             sb.append("- O dataset tratado mantém apenas registros válidos com UF = SC e quantidade de empresas maior que zero.\n");
 
@@ -111,7 +112,7 @@ public class Analyzer {
         }
 
         JFreeChart chart = ChartFactory.createBarChart(
-                "Top 10 municípios de SC com mais empresas abertas em 2025",
+                "Top 10 municípios de SC com mais empresas abertas em 2025 (jan–nov)",
                 "Município",
                 "Quantidade de empresas",
                 dataset,

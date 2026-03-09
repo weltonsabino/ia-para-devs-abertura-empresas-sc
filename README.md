@@ -1,14 +1,14 @@
-# Análise de Abertura de Empresas em Santa Catarina (2025)
+# Análise de Abertura de Empresas em Santa Catarina (Jan-Nov 2025)
 
 Projeto desenvolvido como parte do **desafio prático da trilha IA para DEVs – Programa SCTEC**.
 
-O objetivo deste projeto é construir um pipeline de tratamento e análise de dados utilizando informações públicas sobre abertura de empresas em Santa Catarina no ano de 2025.
+O objetivo deste projeto é construir um pipeline de tratamento e análise de dados utilizando informações públicas sobre abertura de empresas em Santa Catarina no ano de 2025 (Jan-Nov).
 
 A solução realiza ingestão de dados em formato Excel, limpeza e padronização das informações, armazenamento em banco analítico e geração de análises e visualizações.
 
 ## Objetivo do projeto
 
-O projeto busca analisar o cenário de empreendedorismo em Santa Catarina a partir da abertura de empresas em 2025.
+O projeto busca analisar o cenário de empreendedorismo em Santa Catarina a partir da abertura de empresas em 2025 (Jan-Nov).
 
 A solução implementa um pipeline de dados que realiza:
 
@@ -34,7 +34,9 @@ https://www.gov.br/empresas-e-negocios/pt-br/mapa-de-empresas/painel-mapa-de-emp
 Filtros utilizados na extração dos dados:
 
 - UF: Santa Catarina (SC)
-- Período: todos os meses de 2025
+- Período: Janeiro a Novembro de 2025
+
+Obs: A base pública utilizada não contempla dados de dezembro de 2025.
 
 Os dados foram exportados em formato Excel e utilizados como base para o pipeline de análise.
 
@@ -111,7 +113,7 @@ Os dados tratados são carregados em um banco analítico local utilizando **Duck
 
 ### 5. Análise e visualização
 
-Após o carregamento dos dados no DuckDB, o projeto executa consultas analíticas para gerar indicadores sobre a abertura de empresas em Santa Catarina no ano de 2025.
+Após o carregamento dos dados no DuckDB, o projeto executa consultas analíticas para gerar indicadores sobre a abertura de empresas em Santa Catarina no ano de 2025 (Jan-Nov).
 
 Como resultado, o pipeline produz dois tipos de artefatos analíticos:
 
@@ -130,8 +132,9 @@ Após a execução do pipeline são produzidos os seguintes artefatos:
 ```text
 data/
 └── processed/
-    ├── empresas_abertas_sc_2025_clean.csv
-    └── empresas_abertas_sc_2025.duckdb
+│   ├── empresas_abertas_sc_2025_clean.csv
+│   └── empresas_abertas_sc_2025.duckdb
+
 reports/
 ├── summary.md
 └── figures/
