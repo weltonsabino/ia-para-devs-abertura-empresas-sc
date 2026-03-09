@@ -44,6 +44,7 @@ Os dados foram exportados em formato Excel e utilizados como base para o pipelin
 - Maven
 - Apache POI (leitura de arquivos Excel)
 - DuckDB (banco analítico embarcado)
+- JFreeChart (gráficos com rótulos de valores)
 - XChart (geração de gráficos)
 - Git / GitHub (versionamento)
 
@@ -110,26 +111,31 @@ Os dados tratados são carregados em um banco analítico local utilizando **Duck
 
 ### 5. Análise e visualização
 
-O projeto executa consultas analíticas e gera:
+Após o carregamento dos dados no DuckDB, o projeto executa consultas analíticas para gerar indicadores sobre a abertura de empresas em Santa Catarina no ano de 2025.
 
-- relatório em Markdown
-- gráficos em formato PNG
+Como resultado, o pipeline produz dois tipos de artefatos analíticos:
 
-Os resultados são armazenados na pasta:
+- **Relatório em Markdown**, contendo um resumo das principais métricas e resultados da análise
+- **Gráficos analíticos em formato PNG**, que facilitam a visualização e interpretação dos dados
 
-```text
-reports/
-```
+Os gráficos são gerados utilizando bibliotecas Java de visualização de dados:
+
+- **JFreeChart** – utilizado para gráficos de barras com rótulos de valores
+- **XChart** – utilizado para alguns gráficos analíticos auxiliares
 
 ## Resultados gerados
 
 Após a execução do pipeline são produzidos os seguintes artefatos:
 
 ```text
-data/processed/empresas_abertas_sc_2025_clean.csv
-data/processed/empresas_abertas_sc_2025.duckdb
-reports/summary.md
-reports/figures/*.png
+data/
+└── processed/
+    ├── empresas_abertas_sc_2025_clean.csv
+    └── empresas_abertas_sc_2025.duckdb
+reports/
+├── summary.md
+└── figures/
+    └── *.png
 ```
 
 Entre as análises produzidas estão:
