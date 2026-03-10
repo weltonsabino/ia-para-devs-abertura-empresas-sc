@@ -1,6 +1,9 @@
 package br.com.weltonsabino.etl;
 
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row.MissingCellPolicy;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.FileInputStream;
@@ -20,54 +23,62 @@ public class ExcelLoader {
             Sheet sheet = workbook.getSheetAt(0);
             Iterator<org.apache.poi.ss.usermodel.Row> iterator = sheet.iterator();
 
-            if (iterator.hasNext()) {
-                iterator.next(); // pula cabeçalho
-            }
+            skipHeader(iterator);
 
             while (iterator.hasNext()) {
                 org.apache.poi.ss.usermodel.Row excelRow = iterator.next();
+                Row row = mapRow(excelRow);
 
-                String anoTexto = getCellValueAsString(excelRow.getCell(0));
-                String mesAbertura = getCellValueAsString(excelRow.getCell(1));
-                String municipio = getCellValueAsString(excelRow.getCell(2));
-                String naturezaJuridica = getCellValueAsString(excelRow.getCell(3));
-                String regiao = getCellValueAsString(excelRow.getCell(4));
-                String opcaoMei = getCellValueAsString(excelRow.getCell(5));
-                String uf = getCellValueAsString(excelRow.getCell(6));
-                String porte = getCellValueAsString(excelRow.getCell(7));
-                String tipoSituacao = getCellValueAsString(excelRow.getCell(8));
-                String quantidadeTexto = getCellValueAsString(excelRow.getCell(9));
-
-                if (anoTexto == null || anoTexto.isBlank()) {
-                    continue;
+                if (row != null) {
+                    rows.add(row);
                 }
-
-                if ("Totais".equalsIgnoreCase(anoTexto.trim())) {
-                    continue;
-                }
-
-                int anoAbertura = Integer.parseInt(anoTexto.trim());
-                int quantidadeEmpresas = Integer.parseInt(quantidadeTexto.trim());
-
-                rows.add(new Row(
-                        anoAbertura,
-                        mesAbertura,
-                        municipio,
-                        naturezaJuridica,
-                        regiao,
-                        opcaoMei,
-                        uf,
-                        porte,
-                        tipoSituacao,
-                        quantidadeEmpresas
-                ));
             }
         }
 
         return rows;
     }
 
-    private String getCellValueAsString(Cell cell) {
+    private void skipHeader(Iterator<org.apache.poi.ss.usermodel.Row> iterator) {
+        if (iterator.hasNext()) {
+            iterator.next();
+        }
+    }
+
+    private Row mapRow(org.apache.poi.ss.usermodel.Row excelRow) {
+        String anoTexto = getCellValueAsString(excelRow, 0);
+        if (anoTexto.isBlank() || "Totais".equalsIgnoreCase(anoTexto)) {
+            return null;
+        }
+
+        String mesAbertura = getCellValueAsString(excelRow, 1);
+        String municipio = getCellValueAsString(excelRow, 2);
+        String naturezaJuridica = getCellValueAsString(excelRow, 3);
+        String regiao = getCellValueAsString(excelRow, 4);
+        String opcaoMei = getCellValueAsString(excelRow, 5);
+        String uf = getCellValueAsString(excelRow, 6);
+        String porte = getCellValueAsString(excelRow, 7);
+        String tipoSituacao = getCellValueAsString(excelRow, 8);
+        String quantidadeTexto = getCellValueAsString(excelRow, 9);
+
+        int anoAbertura = parseInteger(anoTexto);
+        int quantidadeEmpresas = parseInteger(quantidadeTexto);
+
+        return new Row(
+                anoAbertura,
+                mesAbertura,
+                municipio,
+                naturezaJuridica,
+                regiao,
+                opcaoMei,
+                uf,
+                porte,
+                tipoSituacao,
+                quantidadeEmpresas
+        );
+    }
+
+    private String getCellValueAsString(org.apache.poi.ss.usermodel.Row row, int cellIndex) {
+        Cell cell = row.getCell(cellIndex, MissingCellPolicy.RETURN_BLANK_AS_NULL);
         if (cell == null) {
             return "";
         }
@@ -82,9 +93,13 @@ public class ExcelLoader {
                 yield String.valueOf(value);
             }
             case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
-            case FORMULA -> cell.getCellFormula();
+            case FORMULA -> cell.getCellFormula().trim();
             case BLANK -> "";
             default -> "";
         };
+    }
+
+    private int parseInteger(String value) {
+        return Integer.parseInt(value.trim());
     }
 }
