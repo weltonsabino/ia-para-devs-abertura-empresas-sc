@@ -12,6 +12,8 @@ import java.util.List;
 
 public class DuckDb implements AutoCloseable {
 
+    private static final String TABLE_NAME = "empresas_abertas_sc";
+
     private final Connection connection;
 
     private DuckDb(Connection connection) {
@@ -27,7 +29,7 @@ public class DuckDb implements AutoCloseable {
     public void createSchema() throws SQLException {
         try (Statement stmt = connection.createStatement()) {
             stmt.execute("""
-                CREATE TABLE IF NOT EXISTS empresas_abertas_sc (
+                CREATE TABLE IF NOT EXISTS %s (
                     ano_abertura INTEGER,
                     mes_abertura VARCHAR,
                     municipio VARCHAR,
@@ -39,7 +41,7 @@ public class DuckDb implements AutoCloseable {
                     tipo_situacao VARCHAR,
                     quantidade_empresas INTEGER
                 )
-            """);
+            """.formatted(TABLE_NAME));
         }
     }
 
@@ -63,13 +65,13 @@ public class DuckDb implements AutoCloseable {
 
     private void deleteExistingRows() throws SQLException {
         try (Statement stmt = connection.createStatement()) {
-            stmt.execute("DELETE FROM empresas_abertas_sc");
+            stmt.execute("DELETE FROM " + TABLE_NAME);
         }
     }
 
     private void insertRows(List<Row> rows) throws SQLException {
         String sql = """
-            INSERT INTO empresas_abertas_sc (
+            INSERT INTO %s (
                 ano_abertura,
                 mes_abertura,
                 municipio,
@@ -81,7 +83,7 @@ public class DuckDb implements AutoCloseable {
                 tipo_situacao,
                 quantidade_empresas
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """;
+        """.formatted(TABLE_NAME);
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             for (Row row : rows) {
