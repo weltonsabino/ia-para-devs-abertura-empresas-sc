@@ -66,7 +66,7 @@ public class Analyzer {
             }
 
             sb.append("\n## Observações\n\n");
-            sb.append("- Os dados foram exportados do painel Mapa de Empresas, com filtro para Santa Catarina e meses de 2025 (Jan-Nov).\n");
+            sb.append("- Os dados foram exportados do painel Mapa de Empresas, com filtro para Santa Catarina e meses de 2025 (jan-nov).\n");
             sb.append("- A base pública utilizada não contempla dados de dezembro de 2025.\n");
             sb.append("- A linha de totais foi removida no processo de ingestão.\n");
             sb.append("- O dataset tratado mantém apenas registros válidos com UF = SC e quantidade de empresas maior que zero.\n");
@@ -121,20 +121,12 @@ public class Analyzer {
                 false
         );
 
+        applyDefaultChartStyle(chart);
+
         CategoryPlot plot = chart.getCategoryPlot();
-        BarRenderer renderer = (BarRenderer) plot.getRenderer();
-
-        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
-        renderer.setDefaultItemLabelsVisible(true);
-
         plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.UP_45);
-        
-        renderer.setBarPainter(new StandardBarPainter());
-        chart.setBackgroundPaint(Color.white);
-        plot.setBackgroundPaint(Color.white);
-        
-        Path file = Path.of(outputFile.toString() + ".png");
-        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
+
+        saveChartAsPng(chart, outputFile, 1600, 900);
     }
 
     private void generateAberturasPorMesChart(Path outputFile) throws SQLException, IOException {
@@ -183,20 +175,12 @@ public class Analyzer {
                 false
         );
 
+        applyDefaultChartStyle(chart);
+
         CategoryPlot plot = chart.getCategoryPlot();
-        BarRenderer renderer = (BarRenderer) plot.getRenderer();
-
-        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
-        renderer.setDefaultItemLabelsVisible(true);
-        renderer.setBarPainter(new StandardBarPainter());
-
-        chart.setBackgroundPaint(Color.white);
-        plot.setBackgroundPaint(Color.white);
-
         plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.STANDARD);
 
-        Path file = Path.of(outputFile.toString() + ".png");
-        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
+        saveChartAsPng(chart, outputFile, 1600, 900);
     }
 
     private void generateMeiChart(Path outputFile) throws SQLException, IOException {
@@ -236,23 +220,13 @@ public class Analyzer {
                 false
         );
 
+        applyDefaultChartStyle(chart);
+
         CategoryPlot plot = chart.getCategoryPlot();
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
-
-        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
-        renderer.setDefaultItemLabelsVisible(true);
-        renderer.setBarPainter(new StandardBarPainter());
-
         renderer.setMaximumBarWidth(0.35);
 
-        chart.setBackgroundPaint(Color.white);
-        plot.setBackgroundPaint(Color.white);
-
-        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
-        rangeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
-
-        Path file = Path.of(outputFile.toString() + ".png");
-        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
+        saveChartAsPng(chart, outputFile, 1600, 900);
     }
 
     private void generatePorteChart(Path outputFile) throws SQLException, IOException {
@@ -303,23 +277,9 @@ public class Analyzer {
                 false
         );
 
-        CategoryPlot plot = chart.getCategoryPlot();
-        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+        applyDefaultChartStyle(chart);
 
-        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
-        renderer.setDefaultItemLabelsVisible(true);
-        renderer.setBarPainter(new StandardBarPainter());
-        renderer.setSeriesPaint(0, new Color(255, 82, 82));
-
-        chart.setBackgroundPaint(Color.white);
-        plot.setBackgroundPaint(Color.white);
-        plot.setRangeGridlinePaint(new Color(220, 220, 220));
-
-        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
-        rangeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
-
-        Path file = Path.of(outputFile.toString() + ".png");
-        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
+        saveChartAsPng(chart, outputFile, 1600, 900);
     }
 
     private void generateNaturezaChart(Path outputFile) throws SQLException, IOException {
@@ -360,24 +320,34 @@ public class Analyzer {
                 false
         );
 
+        applyDefaultChartStyle(chart);
+
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+        renderer.setMaximumBarWidth(0.15);
+
+        saveChartAsPng(chart, outputFile, 1800, 1000);
+    }
+
+    private void applyDefaultChartStyle(JFreeChart chart) {
         CategoryPlot plot = chart.getCategoryPlot();
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
 
         renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
         renderer.setDefaultItemLabelsVisible(true);
         renderer.setBarPainter(new StandardBarPainter());
-        renderer.setSeriesPaint(0, new Color(255, 82, 82));
-        renderer.setMaximumBarWidth(0.15);
-        
+
         chart.setBackgroundPaint(Color.white);
         plot.setBackgroundPaint(Color.white);
-        plot.setRangeGridlinePaint(new Color(220,220,220));
+        plot.setRangeGridlinePaint(new Color(220, 220, 220));
 
         NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
         rangeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
+    }
 
+    private void saveChartAsPng(JFreeChart chart, Path outputFile, int width, int height) throws IOException {
         Path file = Path.of(outputFile.toString() + ".png");
-        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1800, 1000);
+        ChartUtils.saveChartAsPNG(file.toFile(), chart, width, height);
     }
 
     private int getInt(Statement stmt, String sql) throws SQLException {
