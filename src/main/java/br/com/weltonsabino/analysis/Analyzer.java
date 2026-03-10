@@ -1,17 +1,6 @@
 package br.com.weltonsabino.analysis;
 
-import java.awt.Color;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.List;
-
+import br.com.weltonsabino.db.DuckDb;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
@@ -24,7 +13,17 @@ import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.category.StandardBarPainter;
 import org.jfree.data.category.DefaultCategoryDataset;
 
-import br.com.weltonsabino.db.DuckDb;
+import java.awt.Color;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Analyzer {
 
@@ -101,10 +100,7 @@ public class Analyzer {
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                String municipio = rs.getString("municipio");
-                if (municipio != null) {
-                    municipio = municipio.replace(" - SC", "").trim();
-                }
+                String municipio = normalizeValue(rs.getString("municipio"), true);
                 int total = rs.getInt("total");
                 dataset.addValue(total, "Empresas abertas", municipio);
             }
@@ -198,13 +194,8 @@ public class Analyzer {
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                String opcaoMei = rs.getString("opcao_mei");
+                String opcaoMei = normalizeValue(rs.getString("opcao_mei"), false);
                 int total = rs.getInt("total");
-
-                if (opcaoMei != null) {
-                    opcaoMei = opcaoMei.trim();
-                }
-
                 dataset.addValue(total, "Empresas abertas", opcaoMei);
             }
         }
@@ -298,13 +289,8 @@ public class Analyzer {
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                String naturezaJuridica = rs.getString("natureza_juridica");
+                String naturezaJuridica = normalizeValue(rs.getString("natureza_juridica"), false);
                 int total = rs.getInt("total");
-
-                if (naturezaJuridica != null) {
-                    naturezaJuridica = naturezaJuridica.trim();
-                }
-
                 dataset.addValue(total, "Empresas abertas", naturezaJuridica);
             }
         }
@@ -397,5 +383,18 @@ public class Analyzer {
         }
 
         return resultado;
+    }
+
+    private String normalizeValue(String value, boolean removeScSuffix) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalizedValue = value.trim();
+        if (removeScSuffix) {
+            normalizedValue = normalizedValue.replace(" - SC", "").trim();
+        }
+
+        return normalizedValue;
     }
 }
