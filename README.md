@@ -1,14 +1,14 @@
-# Análise de Abertura de Empresas em Santa Catarina (Jan-Nov 2025)
+# Análise de Abertura de Empresas em Santa Catarina (jan-nov 2025)
 
 Projeto desenvolvido como parte do **desafio prático da trilha IA para DEVs – Programa SCTEC**.
 
-O objetivo deste projeto é construir um pipeline de tratamento e análise de dados utilizando informações públicas sobre abertura de empresas em Santa Catarina no ano de 2025 (Jan-Nov).
+O objetivo deste projeto é construir um pipeline de tratamento e análise de dados utilizando informações públicas sobre abertura de empresas em Santa Catarina no ano de 2025 (jan-nov).
 
 A solução realiza ingestão de dados em formato Excel, limpeza e padronização das informações, armazenamento em banco analítico e geração de análises e visualizações.
 
 ## Objetivo do projeto
 
-O projeto busca analisar o cenário de empreendedorismo em Santa Catarina a partir da abertura de empresas em 2025 (Jan-Nov).
+O projeto busca analisar o cenário de empreendedorismo em Santa Catarina a partir da abertura de empresas em 2025 (jan-nov).
 
 A solução implementa um pipeline de dados que realiza:
 
@@ -112,7 +112,7 @@ Os dados tratados são carregados em um banco analítico local utilizando **Duck
 
 ### 5. Análise e visualização
 
-Após o carregamento dos dados no DuckDB, o projeto executa consultas analíticas para gerar indicadores sobre a abertura de empresas em Santa Catarina no ano de 2025 (Jan-Nov).
+Após o carregamento dos dados no DuckDB, o projeto executa consultas analíticas para gerar indicadores sobre a abertura de empresas em Santa Catarina no ano de 2025 (jan-nov).
 
 Como resultado, o pipeline produz dois tipos de artefatos analíticos:
 

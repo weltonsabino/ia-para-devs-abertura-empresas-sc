@@ -9,7 +9,7 @@ public class Cleaner {
         List<Row> cleanRows = new ArrayList<>();
 
         for (Row row : rawRows) {
-            if (row == null) {
+            if (!isValid(row)) {
                 continue;
             }
 
@@ -21,18 +21,6 @@ public class Cleaner {
             String porte = normalize(row.porte());
             String tipoSituacao = normalize(row.tipoSituacao());
             String mesAbertura = normalize(row.mesAbertura());
-
-            if (municipio.isBlank()) {
-                continue;
-            }
-
-            if (!"SC".equalsIgnoreCase(uf)) {
-                continue;
-            }
-
-            if (row.quantidadeEmpresas() <= 0) {
-                continue;
-            }
 
             cleanRows.add(new Row(
                     row.anoAbertura(),
@@ -49,6 +37,25 @@ public class Cleaner {
         }
 
         return cleanRows;
+    }
+
+    private static boolean isValid(Row row) {
+        if (row == null) {
+            return false;
+        }
+
+        String municipio = normalize(row.municipio());
+        String uf = normalize(row.uf());
+
+        if (municipio.isBlank()) {
+            return false;
+        }
+
+        if (!"SC".equalsIgnoreCase(uf)) {
+            return false;
+        }
+
+        return row.quantidadeEmpresas() > 0;
     }
 
     private static String normalize(String value) {

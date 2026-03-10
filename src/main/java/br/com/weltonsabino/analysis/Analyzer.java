@@ -1,17 +1,6 @@
 package br.com.weltonsabino.analysis;
 
-import java.awt.Color;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.List;
-
+import br.com.weltonsabino.db.DuckDb;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtils;
 import org.jfree.chart.JFreeChart;
@@ -24,9 +13,33 @@ import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.category.StandardBarPainter;
 import org.jfree.data.category.DefaultCategoryDataset;
 
-import br.com.weltonsabino.db.DuckDb;
+import java.awt.Color;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Analyzer {
+
+    private static final String TABLE_NAME = "empresas_abertas_sc";
+    private static final String SERIES_LABEL = "Empresas abertas";
+
+    private static final int DEFAULT_CHART_WIDTH = 1600;
+    private static final int DEFAULT_CHART_HEIGHT = 900;
+    private static final int NATUREZA_CHART_WIDTH = 1800;
+    private static final int NATUREZA_CHART_HEIGHT = 1000;
+
+    private static final String TOP_MUNICIPIOS_FILE = "top10_municipios";
+    private static final String ABERTURAS_POR_MES_FILE = "aberturas_por_mes";
+    private static final String MEI_FILE = "mei_vs_nao_mei";
+    private static final String PORTE_FILE = "porte_empresas";
+    private static final String NATUREZA_FILE = "natureza_juridica";
 
     private final DuckDb db;
 
@@ -41,9 +54,9 @@ public class Analyzer {
 
         Connection connection = db.connection();
         try (Statement stmt = connection.createStatement()) {
-            int totalLinhas = getInt(stmt, "SELECT COUNT(*) FROM empresas_abertas_sc");
-            int totalEmpresas = getInt(stmt, "SELECT SUM(quantidade_empresas) FROM empresas_abertas_sc");
-            int totalMunicipios = getInt(stmt, "SELECT COUNT(DISTINCT municipio) FROM empresas_abertas_sc");
+            int totalLinhas = getInt(stmt, "SELECT COUNT(*) FROM " + TABLE_NAME);
+            int totalEmpresas = getInt(stmt, "SELECT SUM(quantidade_empresas) FROM " + TABLE_NAME);
+            int totalMunicipios = getInt(stmt, "SELECT COUNT(DISTINCT municipio) FROM " + TABLE_NAME);
 
             List<String> topMunicipios = getTopMunicipios(stmt);
             List<String> topNaturezas = getTopNaturezas(stmt);
@@ -66,7 +79,7 @@ public class Analyzer {
             }
 
             sb.append("\n## Observações\n\n");
-            sb.append("- Os dados foram exportados do painel Mapa de Empresas, com filtro para Santa Catarina e meses de 2025 (Jan-Nov).\n");
+            sb.append("- Os dados foram exportados do painel Mapa de Empresas, com filtro para Santa Catarina e meses de 2025 (jan-nov).\n");
             sb.append("- A base pública utilizada não contempla dados de dezembro de 2025.\n");
             sb.append("- A linha de totais foi removida no processo de ingestão.\n");
             sb.append("- O dataset tratado mantém apenas registros válidos com UF = SC e quantidade de empresas maior que zero.\n");
@@ -78,21 +91,21 @@ public class Analyzer {
     public void generateCharts(Path outputDir) throws IOException, SQLException {
         Files.createDirectories(outputDir);
 
-        generateTopMunicipiosChart(outputDir.resolve("top10_municipios"));
-        generateAberturasPorMesChart(outputDir.resolve("aberturas_por_mes"));
-        generateMeiChart(outputDir.resolve("mei_vs_nao_mei"));
-        generatePorteChart(outputDir.resolve("porte_empresas"));
-        generateNaturezaChart(outputDir.resolve("natureza_juridica"));
+        generateTopMunicipiosChart(outputDir.resolve(TOP_MUNICIPIOS_FILE));
+        generateAberturasPorMesChart(outputDir.resolve(ABERTURAS_POR_MES_FILE));
+        generateMeiChart(outputDir.resolve(MEI_FILE));
+        generatePorteChart(outputDir.resolve(PORTE_FILE));
+        generateNaturezaChart(outputDir.resolve(NATUREZA_FILE));
     }
 
     private void generateTopMunicipiosChart(Path outputFile) throws SQLException, IOException {
         String sql = """
                 SELECT municipio, SUM(quantidade_empresas) AS total
-                FROM empresas_abertas_sc
+                FROM %s
                 GROUP BY municipio
                 ORDER BY total DESC
                 LIMIT 10
-                """;
+                """.formatted(TABLE_NAME);
 
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
@@ -101,12 +114,9 @@ public class Analyzer {
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                String municipio = rs.getString("municipio");
-                if (municipio != null) {
-                    municipio = municipio.replace(" - SC", "").trim();
-                }
+                String municipio = normalizeValue(rs.getString("municipio"), true);
                 int total = rs.getInt("total");
-                dataset.addValue(total, "Empresas abertas", municipio);
+                dataset.addValue(total, SERIES_LABEL, municipio);
             }
         }
 
@@ -121,26 +131,18 @@ public class Analyzer {
                 false
         );
 
+        applyDefaultChartStyle(chart);
+
         CategoryPlot plot = chart.getCategoryPlot();
-        BarRenderer renderer = (BarRenderer) plot.getRenderer();
-
-        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
-        renderer.setDefaultItemLabelsVisible(true);
-
         plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.UP_45);
-        
-        renderer.setBarPainter(new StandardBarPainter());
-        chart.setBackgroundPaint(Color.white);
-        plot.setBackgroundPaint(Color.white);
-        
-        Path file = Path.of(outputFile.toString() + ".png");
-        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
+
+        saveChartAsPng(chart, outputFile, DEFAULT_CHART_WIDTH, DEFAULT_CHART_HEIGHT);
     }
 
     private void generateAberturasPorMesChart(Path outputFile) throws SQLException, IOException {
         String sql = """
                 SELECT mes_abertura, SUM(quantidade_empresas) AS total
-                FROM empresas_abertas_sc
+                FROM %s
                 GROUP BY mes_abertura
                 ORDER BY
                     CASE mes_abertura
@@ -157,7 +159,7 @@ public class Analyzer {
                         WHEN 'Novembro' THEN 11
                         WHEN 'Dezembro' THEN 12
                     END
-                """;
+                """.formatted(TABLE_NAME);
 
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
@@ -168,7 +170,7 @@ public class Analyzer {
             while (rs.next()) {
                 String mes = rs.getString("mes_abertura");
                 int total = rs.getInt("total");
-                dataset.addValue(total, "Empresas abertas", mes);
+                dataset.addValue(total, SERIES_LABEL, mes);
             }
         }
 
@@ -183,29 +185,21 @@ public class Analyzer {
                 false
         );
 
+        applyDefaultChartStyle(chart);
+
         CategoryPlot plot = chart.getCategoryPlot();
-        BarRenderer renderer = (BarRenderer) plot.getRenderer();
-
-        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
-        renderer.setDefaultItemLabelsVisible(true);
-        renderer.setBarPainter(new StandardBarPainter());
-
-        chart.setBackgroundPaint(Color.white);
-        plot.setBackgroundPaint(Color.white);
-
         plot.getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.STANDARD);
 
-        Path file = Path.of(outputFile.toString() + ".png");
-        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
+        saveChartAsPng(chart, outputFile, DEFAULT_CHART_WIDTH, DEFAULT_CHART_HEIGHT);
     }
 
     private void generateMeiChart(Path outputFile) throws SQLException, IOException {
         String sql = """
                 SELECT opcao_mei, SUM(quantidade_empresas) AS total
-                FROM empresas_abertas_sc
+                FROM %s
                 GROUP BY opcao_mei
                 ORDER BY total DESC
-                """;
+                """.formatted(TABLE_NAME);
 
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
@@ -214,14 +208,9 @@ public class Analyzer {
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                String opcaoMei = rs.getString("opcao_mei");
+                String opcaoMei = normalizeValue(rs.getString("opcao_mei"), false);
                 int total = rs.getInt("total");
-
-                if (opcaoMei != null) {
-                    opcaoMei = opcaoMei.trim();
-                }
-
-                dataset.addValue(total, "Empresas abertas", opcaoMei);
+                dataset.addValue(total, SERIES_LABEL, opcaoMei);
             }
         }
 
@@ -236,23 +225,13 @@ public class Analyzer {
                 false
         );
 
+        applyDefaultChartStyle(chart);
+
         CategoryPlot plot = chart.getCategoryPlot();
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
-
-        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
-        renderer.setDefaultItemLabelsVisible(true);
-        renderer.setBarPainter(new StandardBarPainter());
-
         renderer.setMaximumBarWidth(0.35);
 
-        chart.setBackgroundPaint(Color.white);
-        plot.setBackgroundPaint(Color.white);
-
-        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
-        rangeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
-
-        Path file = Path.of(outputFile.toString() + ".png");
-        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
+        saveChartAsPng(chart, outputFile, DEFAULT_CHART_WIDTH, DEFAULT_CHART_HEIGHT);
     }
 
     private void generatePorteChart(Path outputFile) throws SQLException, IOException {
@@ -264,7 +243,7 @@ public class Analyzer {
                         ELSE 'Outras'
                     END AS porte_agrupado,
                     SUM(quantidade_empresas) AS total
-                FROM empresas_abertas_sc
+                FROM %s
                 GROUP BY
                     CASE
                         WHEN porte = 'Microempresa' THEN 'Microempresa'
@@ -277,7 +256,7 @@ public class Analyzer {
                         WHEN porte_agrupado = 'Empresa de pequeno porte' THEN 2
                         WHEN porte_agrupado = 'Outras' THEN 3
                     END
-                """;
+                """.formatted(TABLE_NAME);
 
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
@@ -288,7 +267,7 @@ public class Analyzer {
             while (rs.next()) {
                 String porte = rs.getString("porte_agrupado");
                 int total = rs.getInt("total");
-                dataset.addValue(total, "Empresas abertas", porte);
+                dataset.addValue(total, SERIES_LABEL, porte);
             }
         }
 
@@ -303,33 +282,19 @@ public class Analyzer {
                 false
         );
 
-        CategoryPlot plot = chart.getCategoryPlot();
-        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+        applyDefaultChartStyle(chart);
 
-        renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
-        renderer.setDefaultItemLabelsVisible(true);
-        renderer.setBarPainter(new StandardBarPainter());
-        renderer.setSeriesPaint(0, new Color(255, 82, 82));
-
-        chart.setBackgroundPaint(Color.white);
-        plot.setBackgroundPaint(Color.white);
-        plot.setRangeGridlinePaint(new Color(220, 220, 220));
-
-        NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
-        rangeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
-
-        Path file = Path.of(outputFile.toString() + ".png");
-        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1600, 900);
+        saveChartAsPng(chart, outputFile, DEFAULT_CHART_WIDTH, DEFAULT_CHART_HEIGHT);
     }
 
     private void generateNaturezaChart(Path outputFile) throws SQLException, IOException {
         String sql = """
                 SELECT natureza_juridica, SUM(quantidade_empresas) AS total
-                FROM empresas_abertas_sc
+                FROM %s
                 GROUP BY natureza_juridica
                 ORDER BY total DESC
                 LIMIT 5
-                """;
+                """.formatted(TABLE_NAME);
 
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
@@ -338,14 +303,9 @@ public class Analyzer {
              ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                String naturezaJuridica = rs.getString("natureza_juridica");
+                String naturezaJuridica = normalizeValue(rs.getString("natureza_juridica"), false);
                 int total = rs.getInt("total");
-
-                if (naturezaJuridica != null) {
-                    naturezaJuridica = naturezaJuridica.trim();
-                }
-
-                dataset.addValue(total, "Empresas abertas", naturezaJuridica);
+                dataset.addValue(total, SERIES_LABEL, naturezaJuridica);
             }
         }
 
@@ -360,24 +320,34 @@ public class Analyzer {
                 false
         );
 
+        applyDefaultChartStyle(chart);
+
+        CategoryPlot plot = chart.getCategoryPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+        renderer.setMaximumBarWidth(0.15);
+
+        saveChartAsPng(chart, outputFile, NATUREZA_CHART_WIDTH, NATUREZA_CHART_HEIGHT);
+    }
+
+    private void applyDefaultChartStyle(JFreeChart chart) {
         CategoryPlot plot = chart.getCategoryPlot();
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
 
         renderer.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
         renderer.setDefaultItemLabelsVisible(true);
         renderer.setBarPainter(new StandardBarPainter());
-        renderer.setSeriesPaint(0, new Color(255, 82, 82));
-        renderer.setMaximumBarWidth(0.15);
-        
+
         chart.setBackgroundPaint(Color.white);
         plot.setBackgroundPaint(Color.white);
-        plot.setRangeGridlinePaint(new Color(220,220,220));
+        plot.setRangeGridlinePaint(new Color(220, 220, 220));
 
         NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
         rangeAxis.setNumberFormatOverride(new DecimalFormat("#,###"));
+    }
 
+    private void saveChartAsPng(JFreeChart chart, Path outputFile, int width, int height) throws IOException {
         Path file = Path.of(outputFile.toString() + ".png");
-        ChartUtils.saveChartAsPNG(file.toFile(), chart, 1800, 1000);
+        ChartUtils.saveChartAsPNG(file.toFile(), chart, width, height);
     }
 
     private int getInt(Statement stmt, String sql) throws SQLException {
@@ -392,11 +362,11 @@ public class Analyzer {
     private List<String> getTopMunicipios(Statement stmt) throws SQLException {
         String sql = """
                 SELECT municipio, SUM(quantidade_empresas) AS total
-                FROM empresas_abertas_sc
+                FROM %s
                 GROUP BY municipio
                 ORDER BY total DESC
                 LIMIT 5
-                """;
+                """.formatted(TABLE_NAME);
 
         List<String> resultado = new ArrayList<>();
 
@@ -412,11 +382,11 @@ public class Analyzer {
     private List<String> getTopNaturezas(Statement stmt) throws SQLException {
         String sql = """
                 SELECT natureza_juridica, SUM(quantidade_empresas) AS total
-                FROM empresas_abertas_sc
+                FROM %s
                 GROUP BY natureza_juridica
                 ORDER BY total DESC
                 LIMIT 5
-                """;
+                """.formatted(TABLE_NAME);
 
         List<String> resultado = new ArrayList<>();
 
@@ -427,5 +397,18 @@ public class Analyzer {
         }
 
         return resultado;
+    }
+
+    private String normalizeValue(String value, boolean removeScSuffix) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalizedValue = value.trim();
+        if (removeScSuffix) {
+            normalizedValue = normalizedValue.replace(" - SC", "").trim();
+        }
+
+        return normalizedValue;
     }
 }
