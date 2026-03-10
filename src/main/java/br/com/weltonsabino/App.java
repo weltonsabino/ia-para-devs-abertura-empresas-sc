@@ -25,12 +25,8 @@ public class App {
             Path summaryFile = Path.of("reports/summary.md");
             Path figuresDir = Path.of("reports/figures");
 
-            if (!Files.exists(rawExcel)) {
-                throw new IllegalStateException("Arquivo de entrada não encontrado: " + rawExcel);
-            }
-
-            Files.createDirectories(cleanedCsv.getParent());
-            Files.createDirectories(figuresDir);
+            validateInputFile(rawExcel);
+            createDirectories(cleanedCsv, figuresDir);
 
             logger.info("Iniciando pipeline de análise de abertura de empresas em SC");
             logger.info("Arquivo de entrada: {}", rawExcel);
@@ -63,5 +59,16 @@ public class App {
             logger.error("Erro no pipeline", e);
             System.exit(1);
         }
+    }
+
+    private static void validateInputFile(Path rawExcel) {
+        if (!Files.exists(rawExcel)) {
+            throw new IllegalStateException("Arquivo de entrada não encontrado: " + rawExcel);
+        }
+    }
+
+    private static void createDirectories(Path cleanedCsv, Path figuresDir) throws java.io.IOException {
+        Files.createDirectories(cleanedCsv.getParent());
+        Files.createDirectories(figuresDir);
     }
 }
