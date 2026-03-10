@@ -44,10 +44,30 @@ public class DuckDb implements AutoCloseable {
     }
 
     public void loadRows(List<Row> rows) throws SQLException {
+        boolean originalAutoCommit = connection.getAutoCommit();
+
+        try {
+            connection.setAutoCommit(false);
+
+            deleteExistingRows();
+            insertRows(rows);
+
+            connection.commit();
+        } catch (SQLException e) {
+            connection.rollback();
+            throw e;
+        } finally {
+            connection.setAutoCommit(originalAutoCommit);
+        }
+    }
+
+    private void deleteExistingRows() throws SQLException {
         try (Statement stmt = connection.createStatement()) {
             stmt.execute("DELETE FROM empresas_abertas_sc");
         }
+    }
 
+    private void insertRows(List<Row> rows) throws SQLException {
         String sql = """
             INSERT INTO empresas_abertas_sc (
                 ano_abertura,
@@ -87,7 +107,7 @@ public class DuckDb implements AutoCloseable {
 
     @Override
     public void close() throws SQLException {
-        if (connection != null && !connection.isClosed()) {
+        if (!connection.isClosed()) {
             connection.close();
         }
     }
