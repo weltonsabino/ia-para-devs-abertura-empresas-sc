@@ -1,3 +1,4 @@
+
 # Maven
 /target/
 
@@ -9,10 +10,3 @@
 # IntelliJ
 .idea/
 *.iml
-
-# Banco local
-*.duckdb
-
-# Outputs gerados
-/data/processed/
-/reports/figures/

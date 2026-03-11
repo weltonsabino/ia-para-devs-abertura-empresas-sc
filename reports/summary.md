@@ -1,24 +1,30 @@
-# Relatório - Abertura de Empresas em SC
-
-Este relatório foi gerado automaticamente a partir do dataset tratado e carregado no DuckDB.
+# Resumo da análise de abertura de empresas em SC em 2025 (jan–nov)
 
 ## Visão geral
-- Total de aberturas no recorte do dataset: **962**
 
-## Top 10 municípios por aberturas
-- Florianopolis: **260**
-- Joinville: **205**
-- Itajai: **190**
-- Blumenau: **165**
-- Chapeco: **142**
+- Total de linhas analisadas: 13252
+- Total de empresas abertas: 278958
+- Total de municípios com registros: 295
 
-## Aberturas por segmento
-- Tecnologia: **260**
-- Indústria: **205**
-- Comercio: **190**
-- Serviços: **165**
-- Agronegócio: **142**
+## Top 5 municípios com mais aberturas
+
+- Florianópolis - SC: 29779
+- Joinville - SC: 26485
+- Itajaí - SC: 14771
+- Blumenau - SC: 14453
+- São José - SC: 12580
+
+## Top 5 naturezas jurídicas
+
+- Empresário Individual: 212706
+- Sociedade Limitada: 64952
+- Sociedade em Conta de Participação: 473
+- Sociedade Anônima Fechada: 437
+- Cooperativa: 156
 
 ## Observações
-- O objetivo é apoiar análise exploratória: ranking por município, distribuição por segmento e evolução temporal.
-- Próximos passos possíveis: ampliar período, adicionar CNAE/porte e comparar tendências por região.
+
+- Os dados foram exportados do painel Mapa de Empresas, com filtro para Santa Catarina e meses de 2025 (jan-nov).
+- A base pública utilizada não contempla dados de dezembro de 2025.
+- A linha de totais foi removida no processo de ingestão.
+- O dataset tratado mantém apenas registros válidos com UF = SC e quantidade de empresas maior que zero.

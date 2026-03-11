@@ -2,63 +2,115 @@ package br.com.weltonsabino.db;
 
 import br.com.weltonsabino.etl.Row;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 
 public class DuckDb implements AutoCloseable {
 
-    private final Connection conn;
+    private static final String TABLE_NAME = "empresas_abertas_sc";
 
-    private DuckDb(Connection conn) {
-        this.conn = conn;
+    private final Connection connection;
+
+    private DuckDb(Connection connection) {
+        this.connection = connection;
     }
 
-    public static DuckDb open(Path dbFile) throws Exception {
-        Files.createDirectories(dbFile.getParent());
+    public static DuckDb open(Path dbFile) throws SQLException {
         String url = "jdbc:duckdb:" + dbFile.toAbsolutePath();
-        Connection c = DriverManager.getConnection(url);
-        return new DuckDb(c);
+        Connection connection = DriverManager.getConnection(url);
+        return new DuckDb(connection);
     }
 
-    public void createSchema() throws Exception {
-        try (Statement st = conn.createStatement()) {
-            st.execute("""
-                CREATE TABLE IF NOT EXISTS aberturas_empresas_sc (
-                    municipio TEXT,
-                    segmento TEXT,
-                    data_abertura DATE,
-                    qtd_aberturas INTEGER
-                );
-            """);
-
-            st.execute("DELETE FROM aberturas_empresas_sc;"); // recria carga (simples)
+    public void createSchema() throws SQLException {
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS %s (
+                    ano_abertura INTEGER,
+                    mes_abertura VARCHAR,
+                    municipio VARCHAR,
+                    natureza_juridica VARCHAR,
+                    regiao VARCHAR,
+                    opcao_mei VARCHAR,
+                    uf VARCHAR,
+                    porte VARCHAR,
+                    tipo_situacao VARCHAR,
+                    quantidade_empresas INTEGER
+                )
+            """.formatted(TABLE_NAME));
         }
     }
 
-    public void loadRows(List<Row> rows) throws Exception {
-        String sql = "INSERT INTO aberturas_empresas_sc (municipio, segmento, data_abertura, qtd_aberturas) VALUES (?, ?, ?, ?)";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            for (Row r : rows) {
-                ps.setString(1, r.municipio());
-                ps.setString(2, r.segmento());
-                // converter YearMonth para o 1º dia do mês
-                ps.setDate(3, Date.valueOf(r.dataAbertura().atDay(1)));
-                ps.setInt(4, r.qtdAberturas());
+    public void loadRows(List<Row> rows) throws SQLException {
+        boolean originalAutoCommit = connection.getAutoCommit();
+
+        try {
+            connection.setAutoCommit(false);
+
+            deleteExistingRows();
+            insertRows(rows);
+
+            connection.commit();
+        } catch (SQLException e) {
+            connection.rollback();
+            throw e;
+        } finally {
+            connection.setAutoCommit(originalAutoCommit);
+        }
+    }
+
+    private void deleteExistingRows() throws SQLException {
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("DELETE FROM " + TABLE_NAME);
+        }
+    }
+
+    private void insertRows(List<Row> rows) throws SQLException {
+        String sql = """
+            INSERT INTO %s (
+                ano_abertura,
+                mes_abertura,
+                municipio,
+                natureza_juridica,
+                regiao,
+                opcao_mei,
+                uf,
+                porte,
+                tipo_situacao,
+                quantidade_empresas
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """.formatted(TABLE_NAME);
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            for (Row row : rows) {
+                ps.setInt(1, row.anoAbertura());
+                ps.setString(2, row.mesAbertura());
+                ps.setString(3, row.municipio());
+                ps.setString(4, row.naturezaJuridica());
+                ps.setString(5, row.regiao());
+                ps.setString(6, row.opcaoMei());
+                ps.setString(7, row.uf());
+                ps.setString(8, row.porte());
+                ps.setString(9, row.tipoSituacao());
+                ps.setInt(10, row.quantidadeEmpresas());
                 ps.addBatch();
             }
             ps.executeBatch();
         }
     }
 
-    public ResultSet query(String sql) throws Exception {
-        Statement st = conn.createStatement();
-        return st.executeQuery(sql);
+    public Connection connection() {
+        return connection;
     }
 
     @Override
-    public void close() throws Exception {
-        conn.close();
+    public void close() throws SQLException {
+        if (!connection.isClosed()) {
+            connection.close();
+        }
     }
 }
