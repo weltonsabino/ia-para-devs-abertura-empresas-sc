@@ -190,7 +190,7 @@ Relatórios + Gráficos
 **1. Clone o repositório:**
 
 ```bash
-git clone https://github.com/weltonsabino/ia-dados-abertura-empresas-sc
+git clone https://github.com/weltonsabino/ia-para-devs-abertura-empresas-sc
 ```
 
 **2. Entre na pasta do projeto:**
