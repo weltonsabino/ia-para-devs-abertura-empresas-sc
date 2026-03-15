@@ -267,7 +267,7 @@ BUILD SUCCESS
 
 # Vídeo de apresentação
 
-O vídeo pitch do projeto será disponibilizado aqui após a gravação.
+[Assista ao vídeo explicando o projeto](https://www.youtube.com/watch?v=dhYOVHgQU4Y).
 
 ---
 
@@ -275,4 +275,4 @@ O vídeo pitch do projeto será disponibilizado aqui após a gravação.
 
 Welton Sabino
 
-GitHub: https://github.com/weltonsabino/ia-para-devs-abertura-empresas-sc
+GitHub: [https://github.com/weltonsabino/ia-para-devs-abertura-empresas-sc](https://github.com/weltonsabino/ia-para-devs-abertura-empresas-sc)
